@@ -2,7 +2,7 @@
 #include <MultiStepper.h>
 
 //State Variables
-bool start = true; 
+bool start = 1; 
 
 // define pins
 const int stepPinA = 2;
@@ -36,41 +36,30 @@ void setup() {
   //Limit Switches
   pinMode(limitSwitch_x, INPUT_PULLUP);
   pinMode(limitSwitch_y, INPUT_PULLUP);
-  
 
-  Serial.print("initialized");
-  
-  start = 1;
+  //Initialize Position  
+  initialize();
+  Serial.print("Ready to Go");
+    
   }
 
-void loop() {
-
- initialize();
- 
+void loop() { 
 }
 
 
 void initialize(){
-
+  //uses the state variable 'start' to turn the function on or off
   if(start){
-    
-    while(digitalRead(limitSwitch_y)){
-      negY();
-      }
-      
-    stopBoth();
-    delay(100);
-
-    while(digitalRead(limitSwitch_x)){
-      negX();
-    }
-
-    stopBoth();
-    currentPositionZero();
-    start = 0; 
-    }  
+   while(digitalRead(limitSwitch_y)){
+      negY();}
+   stopBoth();
+   delay(100);
+   while(digitalRead(limitSwitch_x)){
+      negX();}
+   stopBoth();
+   currentPositionZero();
+   start = 0;}  
 }
-
 
 
 void posX(){
@@ -106,8 +95,10 @@ void stopBoth(){
 }
 
 void currentPositionZero(){
-    A.setCurrentPosition(0.0);
-    B.setCurrentPosition(0.0);
+   A.setCurrentPosition(0.0);
+   B.setCurrentPosition(0.0);
 }
+
+
 
 
