@@ -63,7 +63,7 @@ void setup() {
   delay(3000);
 
   //Initialize Position  
-  initialize();
+  //initialize();
 
 }
   
@@ -79,6 +79,7 @@ void loop() {
   spliceMessage(message) ;
   convert();
   moveInitCo(initX,initY); 
+  // moveCo(initX, initY, finX, finY) ; 
 
 }
 
@@ -98,8 +99,7 @@ void initialize(){
   //uses the state variable 'start' to turn thes function on or off
   if(start){
    while(digitalRead(limitSwitch_y)){
-      negY();
-      Serial.print("1");}
+      negY();}
    stopBoth();
    delay(100);
    while(digitalRead(limitSwitch_x)){
@@ -117,28 +117,45 @@ void moveInitCo(float x, float y){
   float targetx = x ;
   float targety = y ; 
 
-  A.moveTo(x);
-  B.moveTo(x);
-  A.setSpeed(300);
-  B.setSpeed(300);
-
-  while(A.distanceToGo()!=0 && B.distanceToGo()!=0){
-      A.runSpeedToPosition();
-      B.runSpeedToPosition();
-      }
-
+  moveDeltaX(x); 
   currentPositionZero();
+  moveDeltaY(y); 
+  //arives at point (x,y) 
 
-  A.moveTo(y);
-  B.moveTo(-y);
-  A.setSpeed(300);
-  B.setSpeed(300);
 
-  while(A.distanceToGo()!=0 && B.distanceToGo()!=0){
-      A.runSpeedToPosition();
-      B.runSpeedToPosition();
-      }
+
+  
   mov = 0;
+ }
+}
+
+
+//this is a first try at going from initialized to (x1,y1) and then to (x2, y2) 
+void moveCo(float x1, float y1, float x2, float y2){
+
+ if(mov){
+ 
+    float deltaX = x2-x1;
+    float deltaY = y2-y1;
+  
+    moveDeltaX(x1);
+    currentPositionZero();
+    moveDeltaY(y1);
+    // arives at (x1,y1) 
+    delay(2000); 
+    
+    currentPositionZero();
+    moveDeltaX(deltaX);
+    currentPositionZero();
+    moveDeltaY(deltaY);
+    //arives at (x2, y2)
+    delay(2000); 
+  
+    //go back the home point
+    initialize(); 
+    
+    
+    mov = 0;
  }
 }
 
@@ -147,9 +164,10 @@ void moveInitCo(float x, float y){
 // moveDeltaX and moveDeltaY ONLY complete lateral and vertical movements along respective axes 
 void moveDeltaX(float delta){
 
-   currentPositionZero();
    A.moveTo(delta);
    B.moveTo(delta);
+   A.setSpeed(300);
+   B.setSpeed(300);
 
    while(A.distanceToGo()!=0 && B.distanceToGo()!=0){
       A.runSpeedToPosition();
@@ -159,9 +177,10 @@ void moveDeltaX(float delta){
 
 void moveDeltaY(float delta){
 
-   currentPositionZero();
    A.moveTo(delta);
    B.moveTo(-1.0*delta);
+   A.setSpeed(300);
+   B.setSpeed(300);
 
    while(A.distanceToGo()!=0 && B.distanceToGo()!=0){
       A.runSpeedToPosition();
