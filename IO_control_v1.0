@@ -1,0 +1,376 @@
+#include <AccelStepper.h>
+#include <MultiStepper.h>
+
+/*/////////////////////////////////////////////////////////////////////////////
+                                      VARIABLES
+/////////////////////////////////////////////////////////////////////////////*/
+
+
+//State Variables
+bool start = 1; 
+bool splice = 0;
+bool conv = 0; 
+bool mov = 0; 
+
+// define pins
+const int stepPinA = 2;
+const int dirPinA = 3;
+const int stepPinB = 4;
+const int dirPinB = 5;
+const int limitSwitch_x = 8;
+const int limitSwitch_y = 9;
+
+//message processing variables
+const unsigned int MAX_MESSAGE_LENGTH = 12;
+static char message[MAX_MESSAGE_LENGTH];
+char initLet;
+char initNum;
+char finLet;
+char finNum;
+float initX;
+float initY;
+float finX;
+float finY; 
+
+
+// instantiate stepper motor objects
+AccelStepper A(AccelStepper::DRIVER, stepPinA, dirPinA);
+AccelStepper B(AccelStepper::DRIVER, stepPinB, dirPinB);
+
+
+/*/////////////////////////////////////////////////////////////////////////////
+                                      SETUP
+/////////////////////////////////////////////////////////////////////////////*/
+
+
+void setup() {
+  Serial.begin(115200);
+
+  //Stepper Setup
+  A.setMaxSpeed(5000.0);
+  B.setMaxSpeed(5000.0);
+  A.setCurrentPosition(0.);
+  B.setCurrentPosition(0.); 
+  A.setAcceleration(5000.);
+  B.setAcceleration(5000.);
+ 
+
+  //Limit Switches
+  pinMode(limitSwitch_x, INPUT_PULLUP);
+  pinMode(limitSwitch_y, INPUT_PULLUP);
+
+  //Delay before beginnging
+  delay(3000);
+
+  //Initialize Position  
+  initialize();
+
+}
+  
+
+/*/////////////////////////////////////////////////////////////////////////////
+                                      LOOP 
+/////////////////////////////////////////////////////////////////////////////*/
+
+void loop() { 
+
+  //Get Coordinates//
+  getMessage(message);
+  spliceMessage(message) ;
+  convert();
+  moveInitCo(initX,initY); 
+
+}
+
+
+  
+
+
+
+/*///////////////////////////////////////////////////////////////////////
+                                    FUNCTIONS 
+///////////////////////////////////////////////////////////////////////*/
+
+
+// Used to Home the cart at a bottom left hand corner of the board 
+
+void initialize(){
+  //uses the state variable 'start' to turn thes function on or off
+  if(start){
+   while(digitalRead(limitSwitch_y)){
+      negY();
+      Serial.print("1");}
+   stopBoth();
+   delay(100);
+   while(digitalRead(limitSwitch_x)){
+      negX();}
+   stopBoth();
+   currentPositionZero();
+   start = 0;}  
+}
+
+
+void moveInitCo(float x, float y){
+
+ if(mov){
+
+  float targetx = x ;
+  float targety = y ; 
+
+  A.moveTo(x);
+  B.moveTo(x);
+  A.setSpeed(300);
+  B.setSpeed(300);
+
+  while(A.distanceToGo()!=0 && B.distanceToGo()!=0){
+      A.runSpeedToPosition();
+      B.runSpeedToPosition();
+      }
+
+  currentPositionZero();
+
+  A.moveTo(y);
+  B.moveTo(-y);
+  A.setSpeed(300);
+  B.setSpeed(300);
+
+  while(A.distanceToGo()!=0 && B.distanceToGo()!=0){
+      A.runSpeedToPosition();
+      B.runSpeedToPosition();
+      }
+  mov = 0;
+ }
+}
+
+
+
+// moveDeltaX and moveDeltaY ONLY complete lateral and vertical movements along respective axes 
+void moveDeltaX(float delta){
+
+   currentPositionZero();
+   A.moveTo(delta);
+   B.moveTo(delta);
+
+   while(A.distanceToGo()!=0 && B.distanceToGo()!=0){
+      A.runSpeedToPosition();
+      B.runSpeedToPosition();
+      }
+}
+
+void moveDeltaY(float delta){
+
+   currentPositionZero();
+   A.moveTo(delta);
+   B.moveTo(-1.0*delta);
+
+   while(A.distanceToGo()!=0 && B.distanceToGo()!=0){
+      A.runSpeedToPosition();
+      B.runSpeedToPosition();
+      }
+}
+
+
+//USED ONLY FOR INITIALIZATION//
+void negX(){
+  A.setSpeed(-300);
+  B.setSpeed(-300);
+  A.runSpeed();
+  B.runSpeed();
+}
+
+//USED ONLY FOR INITIALIZATION//
+void negY(){
+  A.setSpeed(-300);
+  B.setSpeed(300);
+  A.runSpeed();
+  B.runSpeed();
+}
+
+
+//Stops both motors immediately
+void stopBoth(){
+  A.stop();
+  B.stop();
+}
+
+//Sets the current position as zero for both A and B motors
+void currentPositionZero(){
+   A.setCurrentPosition(0.0);
+   B.setCurrentPosition(0.0);
+}
+
+
+
+void convert(){
+  if(conv){
+
+      // Use these chars to convert message to corrdinates
+      char A = 'A';
+      char B = 'B';
+      char C = 'C';
+      char D = 'D';
+      char E = 'E';
+      char F = 'F';
+      char G = 'G';
+      char H = 'H';
+
+      char one = '1';
+      char two = '2';
+      char three = '3';
+      char four = '4';
+      char five = '5';
+      char six = '6';
+      char seven = '7';
+      char eight = '8';
+     
+      
+
+      if(initLet == A){
+        initX = 200. ; 
+      }
+      else if(initLet==B){
+        initX = 400. ;
+      }
+      else if(initLet==C){
+        initX = 600. ;
+      }
+      else if(initLet==D){
+        initX = 800. ;
+      }
+      else if(initLet==E){
+        initX = 1000. ;
+      }
+      else if(initLet==F){
+        initX = 1200. ;
+      }
+      else if(initLet==G){
+        initX = 1400. ;
+      }
+      else if(initLet==H){
+        initX = 1600. ;
+      }
+
+
+      if(initNum==one){
+        initY = 200. ; 
+      }
+      else if(initNum==two){
+        initY = 400. ;
+      }
+      else if(initNum==three){
+        initY = 600. ;
+      }
+      else if(initNum==four){
+        initY = 800. ;
+      }
+      else if(initNum==five){
+        initY = 1000. ;
+      }
+      else if(initNum==six){
+        initY = 1200. ;
+      }
+      else if(initNum==seven){
+        initY = 1400. ;
+      }
+      else if(initNum==eight){
+        initY = 1600. ;
+      }
+
+      if(finLet==A){
+        finX = 200. ; 
+      }
+      else if(finLet==B){
+        finX = 400. ;
+      }
+      else if(finLet==C){
+        finX = 600. ;
+      }
+      else if(finLet==D){
+        finX = 800. ;
+      }
+      else if(finLet==E){
+        finX = 1000. ;
+      }
+      else if(finLet==F){
+        finX = 1200. ;
+      }
+      else if(finLet==G){
+        finX = 1400. ;
+      }
+      else if(finLet==H){
+        finX = 1600. ;
+      }
+
+
+      if(finNum==one){
+        finY = 200. ; 
+      }
+      else if(finNum==two){
+        finY = 400. ;
+      }
+      else if(finNum==three){
+        finY = 600. ;
+      }
+      else if(finNum==four){
+        finY = 800. ;
+      }
+      else if(finNum==five){
+        finY = 1000. ;
+      }
+      else if(finNum==six){
+        finY = 1200. ;
+      }
+      else if(finNum==seven){
+        finY = 1400. ;
+      }
+      else if(finNum==eight){
+        finY = 1600. ;
+      }
+
+    Serial.print(initX);
+    Serial.print('\n');
+    Serial.print(initY);
+    Serial.print('\n');
+    Serial.print(finX);
+    Serial.print('\n');
+    Serial.print(finY);
+    Serial.print('\n');
+    
+    conv = 0; 
+    mov = 1; 
+    
+  }
+}
+
+
+void spliceMessage(char mes[]){
+
+    
+    if(splice){
+        static unsigned int message_pos = 0;
+        initLet = mes[0];
+        initNum = mes[1];
+        finLet = mes[6] ;
+        finNum = mes[7]; 
+
+        splice = 0 ;
+        conv = 1;
+    }
+}
+
+void getMessage(char mes[]){
+
+      while (Serial.available() > 0){
+         
+         static unsigned int message_pos = 0;
+         char inByte = Serial.read();
+      
+         if ( inByte != '\n' && (message_pos < MAX_MESSAGE_LENGTH - 1) ){
+           mes[message_pos] = inByte;
+           message_pos++;}
+         else{
+           mes[message_pos] = '\0';
+           message_pos = 0;
+           splice = 1;}
+       } 
+}
