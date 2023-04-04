@@ -1,5 +1,4 @@
 #include <WiFi.h>
-#include <WiFiClient.h>
 #include <WebServer.h>
 
 // Replace with your network credentials
@@ -8,18 +7,11 @@ const char* password = "CapstoneProject";
 
 WebServer server(80);
 
-void handleRoot() {
-  server.send(200, "text/plain", "Hello from ESP32!");
-}
-
 void handlePost() {
   if (server.method() == HTTP_POST) {
     String message = server.arg("message");
     Serial.println(message);
-    server.send(200, "text/plain", "Message received!");
-  }
-  else {
-    server.send(405, "text/plain", "Method Not Allowed");
+    server.send(200);
   }
 }
 
@@ -39,7 +31,6 @@ void setup() {
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
 
-  server.on("/", handleRoot);
   server.on("/post", handlePost);
 
   server.begin();
