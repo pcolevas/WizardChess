@@ -890,7 +890,7 @@ void setup() {
 
 void loop() { 
   server.handleClient();
-    if(!message.isEmpty()){
+    if(!message.isEmpty() && (message.length()==6)){
     splice = 1;
     spliceMessage() ;
     convert();
