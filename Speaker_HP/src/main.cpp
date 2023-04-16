@@ -20,7 +20,9 @@
     #include <stdio.h>
     #include <stdlib.h>
     #include "driver/i2s.h"                       // Library of I2S routines, comes with ESP32 standard install
-    #include "WavData.h"                          // The Wav file stored in memory, should be in folder with this file
+    #include "YoureAWizardData.h"
+    #include "ThemeSongData.h"
+    #include "ExactlyLikeWizardChessData.h"                          // The Wav file stored in memory, should be in folder with this file
 //------------------------------------------------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------------------------------------------------
