@@ -2,7 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "driver/i2s.h" // Library of I2S routines, comes with ESP32 standard install
-//#include "WavData.h"
+//#include <ExactlyLikeWizardChessData.h>
+//#include <ThemeSongData.h>
+//#include <YoureAWizardData.h>
 #include <AccelStepper.h>
 #include <MultiStepper.h>
 #include <WiFi.h>
@@ -405,9 +407,9 @@ void ledMessage()
     ledOn(redCode, greenCode, blueCode);
 
     //if (redCode)
-        //play(Exactly_Like_WizChess_Data);
+     //   play(Exactly_Like_WizChess_Data);
     //else if (greenCode || blueCode)
-        //play(Yer_A_Wizard_Data);
+      //  play(Yer_A_Wizard_Data);
 }
 
 bool validWAVData(WavHeader_Struct *Wav)
@@ -614,7 +616,7 @@ void loop()
 {
     server.handleClient();
 
-    if (message.length() == 6)
+    if (message.length() == 6 || message.length() == 5)
         spliceMessage();
     else if (message.length() == 3)
         ledMessage();
