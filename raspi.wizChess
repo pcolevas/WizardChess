@@ -1,0 +1,167 @@
+import spacy
+import chess
+from pocketsphinx import LiveSpeech
+import requests
+import time
+
+url = 'http://192.168.10.69/post'
+headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+chessDict = "/home/wiz/chessdict.dict"
+
+# Load Spacy's English model
+nlp = spacy.load('en_core_web_sm')
+
+# Define a dictionary for mapping homophones to chess pieces
+homophone_map = {'night': 'N', 'knight': 'N', 'queen': 'Q',
+                 'king': 'K', 'bishop': 'B', 'rook': 'R', 'rock': 'R',
+                 'rookie': 'Re', 'pawn': ''}
+
+# Define a dictionary for mapping number words to their decimal representations
+number_map = {'one': '1', 'two': '2', 'three': '3', 'four': '4',
+              'fore': '4', 'for': '4', 'five': '5', 'six': '6',
+              'sex': '6', 'seven': '7', 'ate': '8', 'eight': '8',
+              'won': '1'}
+
+# Define a dictionary for mapping file names to chess notation
+file_map = {'a': 'a', 'arc': 'a', 'b': 'b', 'boat': 'b', 
+            'c': 'c', 'cat': 'c', 'd': 'd', 'dock': 'd', 
+            'e': 'e', 'f': 'f', 'fox': 'f', 'g': 'g', 'green': 'g', 'h': 'h', 'hot': 'h',
+            'be': 'b', 'bee': 'b', 'see': 'c', 'sea': 'c', 'gee': 'g'}
+
+
+# Define a function to convert text to chess notation
+def convert_to_chess_notation(text):
+    if(not text):
+        return
+    text=text.strip()
+    text = text.replace("queen side castle",
+                        "O-O-O").replace("castles queen side", "O-O-O")
+    text = text.replace("king side castle",
+                        "O-O").replace("castles king side", "O-O")
+    doc = nlp(text)
+    pieces = []
+    prev_was_file = False
+    for i, token in enumerate(doc):
+        if token.text.lower() in homophone_map:
+            pieces.append(homophone_map[token.text.lower()])
+        elif token.text.lower() in number_map:
+            pieces.append(number_map[token.text.lower()])
+        elif token.pos_ == 'NUM':
+            pieces.append(token.text)
+        elif token.text.lower() in ('to', 'too'):
+            if prev_was_file and i+1 >= len(doc):
+                pieces.append('2')
+            else:
+                continue
+        elif token.text.lower() in ('towards', 'on', 'your', 'turn'):
+            continue
+        elif token.text.lower() in ('the', 'move', 'put', 'place', 'play', 'make', 'my', 'hey', 'phoenix'):
+            continue
+        elif token.text.lower() in ('take', 'takes', 'capture', 'captures'):
+            pieces.append('x')
+        elif token.text.lower() in file_map:
+            pieces.append(file_map[token.text.lower()])
+            prev_was_file = True
+        else:
+            pieces.append(token.text)
+            prev_was_file = False
+    return ''.join(pieces)
+
+def listen_for_move():
+    print("Listening...")
+    data = "message={}".format("010")
+    response = requests.post(url, headers=headers, data=data)
+
+    for phrase in LiveSpeech(sampling_rate=16000, keyphrase='hey phoenix', kws_threshold=1e-50, dic=chessDict):
+        print("Wake word detected!")
+        data = "message={}".format("101")
+        response = requests.post(url, headers=headers, data=data)
+        break
+
+    chessMove = ""
+
+    for phrase in LiveSpeech(sampling_rate=16000, dic=chessDict): #, kws_threshold=1e-50):  # kws=keywordsFile):
+        print(phrase)
+        chessMove += str(phrase) + " "
+        if "your turn" in chessMove:
+            print(chessMove)
+            data = "message={}".format(chessMove)
+            response = requests.post(url, headers=headers, data=data)
+            return chessMove
+        if "your move" in chessMove:
+            print(chessMove)
+            data = "message={}".format(chessMove)
+            response = requests.post(url, headers=headers, data=data)
+            return chessMove
+        if "your go" in chessMove:
+            print(chessMove)
+            data = "message={}".format(chessMove)
+            response = requests.post(url, headers=headers, data=data)
+            return chessMove
+
+
+# create a new chess board
+board = chess.Board()
+
+data = "message={}".format("111")
+response = requests.post(url, headers=headers, data=data)
+
+# loop until the game is over
+while not board.is_game_over():
+    # print the current board state
+    print(board)
+
+    # prompt the user for their move
+    try:
+        move_text = listen_for_move()
+    except Exception as e:
+        for i in range(20):
+            data = "message={}".format("100")
+            response = requests.post(url, headers=headers, data=data)
+            time.sleep(0.250)
+            data = "message={}".format("000")
+            response = requests.post(url, headers=headers, data=data)
+            time.sleep(0.250)
+
+    # convert the move text to a chess.Move object
+    try:
+        move = board.parse_san(convert_to_chess_notation(move_text))
+    except ValueError:
+        print("Invalid move notation.")
+        data = "message={}".format("100")
+        response = requests.post(url, headers=headers, data=data)
+        time.sleep(0.250)
+        continue
+
+    isCapture = 1 if board.is_capture(move) else 0
+
+    # check if the move is legal
+    if board.is_legal(move):
+        # get the moving piece and its starting square
+        piece = board.piece_at(move.from_square)
+
+        # print information about the move
+        print(
+            f"The {piece} on {chess.square_name(move.from_square)} is moving to {chess.square_name(move.to_square)}.")
+        
+        data = "message={}{}{}".format(chess.square_name(move.from_square).upper(), chess.square_name(move.to_square).upper(), isCapture)
+        print("Data: " + data)
+
+        response = requests.post(url, headers=headers, data=data)
+        print("Response: " + response.text)
+        # make the move on the board
+        board.push(move)
+    else:
+        print("Illegal move.")
+        data = "message={}".format("100")
+        response = requests.post(url, headers=headers, data=data)
+        time.sleep(0.250)
+        data = "message={}".format("111")
+        response = requests.post(url, headers=headers, data=data)
+        time.sleep(0.250)
+        data = "message={}".format("100")
+        response = requests.post(url, headers=headers, data=data)
+        time.sleep(0.250)
+        data = "message={}".format("111")
+        response = requests.post(url, headers=headers, data=data)
+        time.sleep(0.250)
